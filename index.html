@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Json Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background: #000000;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ff0000;
+            text-shadow: 1px 2px 8px rgba(255, 0, 0, 0.8);
+        }
+
+        .file-upload {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .file-upload label {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 8px;
+            border: 2px solid #ff0000;
+            cursor: pointer;
+            background: #1a1a1a;
+            color: #ff0000;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        .file-upload label:hover {
+            background: #ff0000;
+            color: #ffffff;
+        }
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload .filename {
+            font-size: 0.9rem;
+            color: #b0b0b0;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .card {
+            background: #121212;
+            border: 1px solid #ff0000;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 6px 15px rgba(255, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 12px 20px rgba(255, 0, 0, 0.6);
+        }
+
+        .card-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff0000;
+            margin-bottom: 15px;
+        }
+
+        .card-content {
+            font-size: 1rem;
+            color: #e0e0e0;
+            overflow-y: auto;
+            max-height: 300px;
+            scrollbar-width: thin;
+            scrollbar-color: #ff0000 #1a1a1a;
+        }
+        .card-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .card-content::-webkit-scrollbar-thumb {
+            background: #ff0000;
+            border-radius: 4px;
+        }
+        .card-content::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .card-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .card-content th,
+        .card-content td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #333333;
+        }
+        .card-content th {
+            background: #1a1a1a;
+            color: #ff0000;
+            text-transform: uppercase;
+        }
+        .card-content td {
+            background: #1f1f1f;
+        }
+
+        .search-bar {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+        }
+        .search-bar input {
+            width: 90%;
+            max-width: 400px;
+            padding: 10px;
+            border: 2px solid #ff0000;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: #121212;
+            color: #ffffff;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        .search-bar input:focus {
+            border-color: #ff4d4d;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            .card {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 id="headerText">Json Viewer</h1>
+    <div class="file-upload">
+        <label for="fileInput" id="fileLabel">Choose File</label>
+        <span class="filename" id="fileName">No file chosen</span>
+        <input type="file" id="fileInput" accept=".txt" />
+    </div>
+    <div id="cardsContainer" class="cards-container"></div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileLabel = document.getElementById('fileLabel');
+        const fileName = document.getElementById('fileName');
+        const headerText = document.getElementById('headerText');
+        const cardsContainer = document.getElementById('cardsContainer');
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileLabel.textContent = 'Rechoose File';
+                fileName.textContent = file.name;
+                headerText.textContent = `Viewing: ${file.name}`;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const content = e.target.result.trim();
+                        const jsonData = JSON.parse(content);
+                        renderCards(jsonData);
+                    } catch (error) {
+                        alert('Invalid file content. Please ensure the file contains valid JSON data.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function createCard(title, content) {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const searchBar = document.createElement('div');
+            searchBar.className = 'search-bar';
+            const searchInput = document.createElement('input');
+            searchInput.setAttribute('placeholder', `Search in ${title}...`);
+            searchInput.addEventListener('input', () => filterContent(contentContainer, searchInput.value));
+            searchBar.appendChild(searchInput);
+
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.textContent = title;
+
+            const contentContainer = document.createElement('div');
+            contentContainer.className = 'card-content';
+            renderContent(content, contentContainer);
+
+            card.appendChild(searchBar);
+            card.appendChild(header);
+            card.appendChild(contentContainer);
+            return card;
+        }
+
+        function renderContent(content, container) {
+            container.innerHTML = '';
+            if (typeof content === 'object' && !Array.isArray(content)) {
+                container.appendChild(createTable(content));
+            } else if (Array.isArray(content)) {
+                content.forEach(item => {
+                    if (typeof item === 'object') {
+                        container.appendChild(createTable(item));
+                    } else {
+                        container.innerHTML += `<p>${item}</p>`;
+                    }
+                });
+            } else {
+                container.innerHTML = `<p>${content}</p>`;
+            }
+        }
+
+        function createTable(data) {
+            const table = document.createElement('table');
+            for (const key in data) {
+                const row = table.insertRow();
+                const keyCell = row.insertCell(0);
+                const valueCell = row.insertCell(1);
+
+                const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+                keyCell.textContent = formattedKey;
+                valueCell.textContent = data[key];
+            }
+            return table;
+        }
+
+        function filterContent(container, query) {
+            const rows = container.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = Array.from(row.cells);
+                const matches = cells.some(cell => cell.textContent.toLowerCase().includes(query.toLowerCase()));
+                row.style.display = matches ? '' : 'none';
+            });
+        }
+
+        function renderCards(data) {
+            cardsContainer.innerHTML = '';
+            if (typeof data === 'object' && !Array.isArray(data)) {
+                for (const key in data) {
+                    const card = createCard(key, data[key]);
+                    cardsContainer.appendChild(card);
+                }
+            } else if (Array.isArray(data)) {
+                data.forEach((item, index) => {
+                    const card = createCard(`Item ${index + 1}`, item);
+                    cardsContainer.appendChild(card);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
